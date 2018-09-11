@@ -1,0 +1,62 @@
+**********************************************************************
+Battleships game documentation
+======================================================================
+System states
+----------------------------------------------------------------------
+1. Setup ships
+    Initialises positions of ships on the two boards.
+2. Play
+    Players take turns shooting at their opponents' boards.
+    Opposing player calls out whether it is a hit or a miss.
+    Opposing player calls out when a ship is sunk.
+
+======================================================================
+Use-cases
+----------------------------------------------------------------------
+Place ships
+    Primary actor: 
+        The player whose turn it is to place ships.
+    Summary:
+        A player places each of his available ships onto his board.
+    Precondition:
+        Setup stage of game; and board is clear.
+    Trigger:
+        New game and player's turn to place ships.
+    Success guarantee:
+        All ships placed; proceed to begin game.
+    MSS:
+        While player still has available ships:
+            place one of his ships onto his own board,
+            specifying its position and facing.
+
+Fire salvo
+    Primary actor:
+        The player whose turn it is to play.
+    Summary:
+        Player fires a salvo onto a square on his opponent's board,
+            calling out the coordinates.
+        Report hit or miss and record this on own secondary board.
+        Report if a ship is sunk.
+        Game over if opponent has no more ships.
+    Precondition:
+        Board has been setup
+        Player's turn to fire a salvo
+    Trigger:
+        Board finished setup, or opponent has finished his salvo.
+    Success guarantee:
+        Record output on own secondary board.
+    MSS:
+        Player gives coordinates and fires salvo.
+        Game reports hit or miss, player marks this on own
+            secondary board.
+        If a ship is sunk, report this.
+        If opponent has no more ships, player wins.
+        Otherwise, opponent's turn to fire a salvo.
+
+======================================================================
+Behaviour descriptions
+----------------------------------------------------------------------
+
+Place ships
+
+Program launch
