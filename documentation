@@ -59,4 +59,25 @@ Behaviour descriptions
 
 Place ships
 
-Program launch
+App-launch -- start() --> Game
+Game -- init() --> Game
+Game -- player1setup() --> player1ctrl
+    while p1 has ships:
+        player1ctrl -- placeShip() --> pBoard1
+            pBoard1 --placeShip() --> pBoard1
+Game -- player2setup() --> player2ctrl
+    while p2 has ships:
+        player2ctrl -- placeShip() --> pBoard2
+            pBoard2 --placeShip() --> pBoard2
+
+While no winner:
+    Game -- player1turn() --> player1ctrl
+        player1ctrl -- fire() --> pBoard2
+            pBoard2 -- report() --> sBoard1
+            pBoard2 -- report() --> pBoard2
+            pBoard2 -- report() --> Game
+    Game -- player2turn() --> player2ctrl
+        player2ctrl -- fire() --> pBoard1
+            pBoard1 -- report() --> sBoard2
+            pBoard1 -- report() --> pBoard1
+            pBoard1 -- report() --> Game
