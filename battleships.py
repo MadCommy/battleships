@@ -3,20 +3,62 @@
 import pdb
 import random
 import re
+import time
+import socket
 
 class Game:
-    def __init__(self,size):
-        self.player1 = Player(self,'Player',size,"human")
-        # self.player2 = Player(self,'Computer',size,"fair")
-        self.player2 = Player(self,'Computer',size,"lucky")
-        self.size = size
+    def __init__(self):
+        time.sleep(1)
+        self.size = 10
 
-        self.autosetup = True
+        self.multiplayer = False
+        self.host = '127.0.0.1'
+        self.port = 4000
+
+        self.autosetup = self.getAutoSetup()
+
+        self.player1 = Player(self,"Player 1",self.size,"human")
+        self.player2 = Player(self,"Player 2",self.size,self.getOpponent())
 
     def __repr__(self):
         return "\n".join(["size:" + str(self.size),str(self.player1),str(self.player2)])
 
-    def setup(self):
+    def getSize(self):
+        while True:
+            size = int(input("Board size? (min. 10): "))
+            if (size >= 10):
+                return size
+
+    def getAutoSetup(self):
+        while True:
+            i = input("Auto-setup ships? (y/n): ") 
+            if len(i) == 0:
+                return True
+            elif i == 'y':
+                return True
+            elif i == 'n':
+                return False
+            print("Type y/n")
+
+    def getOpponent(self):
+            while True:
+                i = input("Play against Human or Computer? (human|computer): ") 
+                if i == "human" or i == "h":
+                    self.multiplayer = True
+                    port = input("Enter port number (default 4000): ")
+                    if len(port) > 0:
+                        self.port = int(port)
+                    host = input("Enter host ip (default 127.0.0.1): ")
+                    if len(host) > 0:
+                        self.host = host
+                    return "remote"
+                elif i == "computer" or i == "c":
+                    while True:
+                        ai = input("AI type? (dumb|fair|lucky): ")
+                        if ai in ["dumb","fair","lucky"]:
+                            return ai
+
+    def placeShips(self):
         self.player1.placeShips()
         self.player2.placeShips()
 
@@ -30,12 +72,22 @@ class Game:
                 winner = self.player2
                 break
 
-        print(winner.name + " wins!")
+        self.display(winner.name + " wins!")
         return
 
     def run(self):
-        self.setup()
+        self.placeShips()
         self.play()
+
+    def display(s):
+        self.player1.controller.display(s)
+        self.player2.controller.display(s)
+        
+    def end(self):
+        if self.multiplayer:
+            self.player2.controller.prep("end")
+            self.player2.controller.connection.close()
+        exit()
 
 class Player:
     def __init__(self,game,name,size,control):
@@ -50,6 +102,8 @@ class Player:
 
         if control == "human":
             self.controller = Human(self)
+        if control == "remote":
+            self.controller = Remote(self)
         elif control == "dumb":
             self.controller = Dumb(self)
         elif control == "fair":
@@ -79,22 +133,26 @@ class Player:
 
     def placeShips(self):
         for ship in self.ships:
-            x,y,facing = self.controller.getPlacement(self,ship)
+            x,y,facing = self.controller.getPlacement(ship)
             self.primary.placeShip(ship,x,y,facing)
             ship.recordPlacement(x,y,facing)
         return
 
     def playTurn(self):
-        x,y = self.controller.getShot(self)
+        x,y = self.controller.getShot()
         shot = self.fireShot(x,y)
         if (shot[0] == "miss"):
             self.secondary.shotMiss(x,y)
+            self.controller.display(str(self))
         elif (shot[0] == "hit"):
             self.secondary.shotHit(x,y)
+            self.controller.display(str(self))
         elif (shot[0] == "sunk"):
             self.secondary.shotSunk(shot[1])
+            self.controller.display(str(self))
         elif (shot[0] == "game over"):
             self.secondary.shotSunk(shot[1])
+            self.controller.display(str(self))
             return "game over"
         else:
             return "error"
@@ -131,12 +189,12 @@ class Controller:
         self.secondary = player.secondary
         self.ships = player.ships
 
-    def validPlacements(self,player,ship):
+    def validPlacements(self,ship):
         placements = []
-        for x in range(1,player.size):
-            for y in range(1,player.size):
+        for x in range(1,self.player.size):
+            for y in range(1,self.player.size):
                 for facing in ["down","right"]:
-                    if player.primary.isValidPlacement(ship,x,y,facing):
+                    if self.player.primary.isValidPlacement(ship,x,y,facing):
                         placements.append((x,y,facing))
         return placements
 
@@ -149,48 +207,99 @@ class Controller:
         return cells
 
 class Human(Controller):
-    def getPlacement(self,player,ship):
+    def getPlacement(self,ship):
         if self.player.game.autosetup:
-            return self.getPlacementAuto(player,ship)
+            return self.getPlacementAuto(ship)
         else:
-            return self.getPlacementManual(player,ship)
+            return self.getPlacementManual(ship)
 
-    def getPlacementManual(self,player,ship):
+    def display(self,s):
+        print(s)
+
+    def getPlacementManual(self,ship):
         while True:
-            print(player.primary)
+            self.display(str(self.player.primary))
             position = input("Position for " + ship.name + ": ")
             if not (re.match('[A-Za-z][0-9]+',position)):
-                print("Invalid coordinates.")
+                self.display("Invalid coordinates.")
                 continue
             x,y = getXY(position)
             facing = input("Facing [right|down]: ")
             if (facing != "right" and facing != "down"):
-                print("type \"right\" or \"down\"")
+                self.display("type \"right\" or \"down\"")
                 continue
-            if (player.primary.isValidPlacement(ship,x,y,facing)):
+            if (self.player.primary.isValidPlacement(ship,x,y,facing)):
                 return x,y,facing
-            print("Invalid placement.")
+            self.display("Invalid placement.")
 
-    def getPlacementAuto(self,player,ship):
-        return random.choice(self.validPlacements(player,ship))
-    
-    def getShot(self,player):
+    def getPlacementAuto(self,ship):
+        return random.choice(self.validPlacements(ship))
+
+    def getShot(self):
         while True:
-            print(player)
+            self.display(str(self.player))
             position = input("Enter shot coordinates: ")
             if position == 'r':
                 return random.choice(self.validShots())
+            elif position == 'q':
+                self.player.game.end()
             elif not (re.match('[A-Za-z][0-9]+',position)):
-                print("Invalid coordinates.")
+                self.display("Invalid coordinates.")
                 continue
             x,y = getXY(position)
             if self.secondary.isValidShot(x,y):
                 return x,y
-            print("Invalid shot.")
+            self.display("Invalid shot.")
+
+class Remote(Human):
+    def __init__(self,player):
+        Human.__init__(self,player)
+        self.host = self.player.game.host
+        self.port = self.player.game.port
+        self.socket = socket.socket()
+        self.socket.bind((self.host,self.port))
+        self.socket.listen(1)
+        print("Waiting for player 2 to connect...")
+        self.connection, self.addr = self.socket.accept()
+        self.display(str(self.player))
+
+    def prep(self,command):
+        # commands are: display|input
+        self.connection.send(command.encode())
+        check = self.connection.recv(1024)
+
+    def display(self,s):
+        self.prep("display")
+        self.connection.send(s.encode())
+
+    def input(self,s):
+        self.prep("input")
+        self.connection.send(s.encode())
+        message = self.connection.recv(1024).decode()
+        return message
+
+    def getShot(self):
+        while True:
+            self.display(str(self.player))
+            position = self.input("Enter shot coordinates: ")
+            if position == 'q':
+                self.player.game.end()
+            elif position == 'r':
+                return random.choice(self.validShots())
+            elif not (re.match('[A-Za-z][0-9]+',position)):
+                self.display("Invalid coordinates.")
+                continue
+            x,y = getXY(position)
+            if self.secondary.isValidShot(x,y):
+                return x,y
+            self.display("Invalid shot.")
 
 class AI(Controller):
-    def getPlacement(self,player,ship):
-        return random.choice(self.validPlacements(player,ship))
+    def display(self,s):
+        return
+
+    def getPlacement(self,ship):
+        return random.choice(self.validPlacements(ship))
 
     def randomShot(self):
         return random.choice(self.validShots())
@@ -213,7 +322,6 @@ class AI(Controller):
             return self.randomShot()
         r = random.randint(1,100)
         if r <= luck:
-            # pdb.set_trace()
             return random.choice(self.getShipCells())
         else:
             return self.randomShot()
@@ -280,13 +388,12 @@ class AI(Controller):
         for cell in self.hits:
             cells = self.getAdjacent(cell)
             for (x,y) in cells:
-                # pdb.set_trace()
                 if self.secondary.isValidShot(x,y):
                     return (x,y)
         return 0
 
 class Dumb(AI):
-    def getShot(self,player):
+    def getShot(self):
         x,y = self.randomShot()
         return x,y
 
@@ -297,7 +404,7 @@ class Fair(AI):
         self.lines = []
         self.hits = []
 
-    def getShot(self,player):
+    def getShot(self):
         self.hits = self.getHits()
         self.lines = self.getLines()
         if len(self.lines) > 0:
@@ -318,7 +425,7 @@ class Lucky(AI):
         self.lines = []
         self.hits = []
 
-    def getShot(self,player):
+    def getShot(self):
         self.hits = self.getHits()
         self.lines = self.getLines()
         if len(self.lines) > 0:
@@ -339,7 +446,7 @@ class Perfect(AI):
         self.lines = []
         self.hits = []
 
-    def getShot(self,player):
+    def getShot(self):
         self.hits = self.getHits()
         self.lines = self.getLines()
         if len(self.lines) > 0:
@@ -360,23 +467,19 @@ def getXY(position):
 
 class Board:
     def __init__(self,player):
-        size = player.size
-        self.board = [["." for i in range(size+1)] for i in range(size+1)]
+        self.player = player
+        self.size = player.size
+        self.board = [["." for i in range(self.size+1)] for i in range(self.size+1)]
         self.board[0][0] = " "
-        for i in range(size):
+        for i in range(self.size):
             self.board[i+1][0] = chr(ord('A') + i)
             self.board[0][i+1] = str(i + 1)
-        self.player = player
-        self.size = size
 
     def __repr__(self):
         out = "\n".join([" ".join(self.board[i]) for i in range(self.size + 1)])
         return out
 
 class Primary(Board):
-    def __init__(self,player):
-        Board.__init__(self,player)
-
     def placeShip(self,ship,x,y,facing):
         for i in range(ship.size):
             self.board[x][y] = ship.icon
@@ -410,9 +513,6 @@ class Primary(Board):
         self.board[x][y] = '+'
 
 class Secondary(Board):
-    def __init__(self,player):
-        Board.__init__(self,player)
-
     def shotHit(self,x,y):
         self.board[x][y] = '#'
 
@@ -513,5 +613,5 @@ class Destroyer(Ship):
         for i in range(self.size):
             self.health += self.healthIcon
 
-myGame = Game(10)
+myGame = Game()
 myGame.run()
