@@ -3,14 +3,19 @@
 import pdb
 import random
 import re
+import os
 import socket
+
+# to get local ip adress, run:
+# hostname --ip-address
 
 class Game:
     def __init__(self):
         self.size = 10
 
         self.multiplayer = False
-        self.host = '127.0.0.1'
+        # self.host = '127.0.0.1'
+        self.host = os.popen("hostname --ip-address").readlines()[0].rstrip()
         self.port = 4000
 
         self.autosetup = self.getAutoSetup()
@@ -46,9 +51,9 @@ class Game:
                     port = input("Enter port number (default 4000): ")
                     if len(port) > 0:
                         self.port = int(port)
-                    host = input("Enter host ip (default 127.0.0.1): ")
-                    if len(host) > 0:
-                        self.host = host
+                    # host = input("Enter host ip (default 127.0.0.1): ")
+                    # if len(host) > 0:
+                    #     self.host = host
                     return "remote"
                 elif i == "computer" or i == "c":
                     while True:
@@ -257,6 +262,7 @@ class Remote(Human):
         self.socket = socket.socket()
         self.socket.bind((self.host,self.port))
         self.socket.listen(1)
+        print("IP address is " + self.player.game.host)
         print("Waiting for player 2 to connect...")
         self.connection, self.addr = self.socket.accept()
         self.display(str(self.player))
