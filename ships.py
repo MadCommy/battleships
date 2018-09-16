@@ -3,12 +3,10 @@
 import pdb
 import random
 import re
-import time
 import socket
 
 class Game:
     def __init__(self):
-        time.sleep(1)
         self.size = 10
 
         self.multiplayer = False
