@@ -14,7 +14,6 @@ class Game:
         self.size = 10
 
         self.multiplayer = False
-        # self.host = '127.0.0.1'
         self.host = os.popen("hostname --ip-address").readlines()[0].rstrip()
         self.port = 4000
 
@@ -51,9 +50,6 @@ class Game:
                     port = input("Enter port number (default 4000): ")
                     if len(port) > 0:
                         self.port = int(port)
-                    # host = input("Enter host ip (default 127.0.0.1): ")
-                    # if len(host) > 0:
-                    #     self.host = host
                     return "remote"
                 elif i == "computer" or i == "c":
                     while True:
@@ -82,7 +78,7 @@ class Game:
         self.placeShips()
         self.play()
 
-    def display(s):
+    def display(self,s):
         self.player1.controller.display(s)
         self.player2.controller.display(s)
         
@@ -113,8 +109,6 @@ class Player:
             self.controller = Fair(self)
         elif control == "lucky":
             self.controller = Lucky(self)
-        else:
-            self.controller == Fair(self)
 
     def __repr__(self):
         out = ["\n"]
@@ -545,8 +539,6 @@ class Ship:
     def __repr__(self):
         padding = " "*(len("Battleship") - len(self.name))
         out = [self.name + padding]
-        # for cell in self.cells:
-        #     out.append(str(cell))
         out.append(self.health)
         return " ".join(out)
 
