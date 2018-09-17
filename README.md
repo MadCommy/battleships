@@ -15,3 +15,4 @@ Other player must run the client program on their computer, and enter the host's
 
 1. Run the main file, and follow the instructions to setup the game.
 2. While playing, type the coordinates of each shot to fire a shot (e.g. D3).
+3. Take turns until the all of your (or your opponent's) ships are sunk.
